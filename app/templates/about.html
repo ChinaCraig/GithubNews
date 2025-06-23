@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}关于 - GitHub新闻{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">
+                    <i class="fab fa-github text-primary me-2"></i>关于GitHub新闻
+                </h2>
+                
+                <div class="text-center mb-4">
+                    <p class="lead">实时获取和展示GitHub上最热门的AI项目，助你掌握前沿技术动态</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-rocket text-primary me-2"></i>项目特色</h4>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                实时同步GitHub热门AI项目
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                支持多维度搜索和筛选
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                智能排序（星标、更新时间、名称）
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                定时自动更新数据
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                详细的统计分析
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                响应式设计，移动端友好
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-cogs text-primary me-2"></i>技术栈</h4>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fab fa-python text-warning me-2"></i>
+                                <strong>后端：</strong>Python Flask
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-database text-info me-2"></i>
+                                <strong>数据库：</strong>MySQL 8
+                            </li>
+                            <li class="mb-2">
+                                <i class="fab fa-bootstrap text-purple me-2"></i>
+                                <strong>前端：</strong>Bootstrap 5
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-cloud text-primary me-2"></i>
+                                <strong>API：</strong>GitHub REST API
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-clock text-success me-2"></i>
+                                <strong>定时任务：</strong>APScheduler
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-chart-bar text-danger me-2"></i>
+                                <strong>数据分析：</strong>SQLAlchemy
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="row">
+                    <div class="col-12">
+                        <h4><i class="fas fa-question-circle text-primary me-2"></i>功能说明</h4>
+                        
+                        <div class="accordion" id="featureAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="searchHeading">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#searchCollapse">
+                                        <i class="fas fa-search me-2"></i>搜索和筛选
+                                    </button>
+                                </h2>
+                                <div id="searchCollapse" class="accordion-collapse collapse show" 
+                                     data-bs-parent="#featureAccordion">
+                                    <div class="accordion-body">
+                                        <p>支持多种搜索方式：</p>
+                                        <ul>
+                                            <li><strong>关键词搜索：</strong>在项目名称和描述中搜索</li>
+                                            <li><strong>作者筛选：</strong>按GitHub用户名筛选</li>
+                                            <li><strong>编程语言：</strong>按主要编程语言分类</li>
+                                            <li><strong>智能排序：</strong>支持按星标数、更新时间、项目名称排序</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="refreshHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#refreshCollapse">
+                                        <i class="fas fa-sync-alt me-2"></i>数据更新机制
+                                    </button>
+                                </h2>
+                                <div id="refreshCollapse" class="accordion-collapse collapse" 
+                                     data-bs-parent="#featureAccordion">
+                                    <div class="accordion-body">
+                                        <p>采用双重更新机制确保数据时效性：</p>
+                                        <ul>
+                                            <li><strong>定时更新：</strong>系统每6小时自动从GitHub获取最新数据</li>
+                                            <li><strong>手动更新：</strong>用户可随时点击"手动刷新"获取最新数据</li>
+                                            <li><strong>智能去重：</strong>根据项目名称+作者进行去重，存在则更新，不存在则新增</li>
+                                            <li><strong>批量处理：</strong>每次最多获取1000个项目数据</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="statsHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#statsCollapse">
+                                        <i class="fas fa-chart-bar me-2"></i>统计分析
+                                    </button>
+                                </h2>
+                                <div id="statsCollapse" class="accordion-collapse collapse" 
+                                     data-bs-parent="#featureAccordion">
+                                    <div class="accordion-body">
+                                        <p>提供丰富的数据统计功能：</p>
+                                        <ul>
+                                            <li><strong>总体统计：</strong>项目总数、星标总数、分叉总数</li>
+                                            <li><strong>语言分析：</strong>热门编程语言排行榜</li>
+                                            <li><strong>刷新日志：</strong>记录每次数据更新的详细信息</li>
+                                            <li><strong>API统计：</strong>监控GitHub API调用情况和成功率</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <h4><i class="fas fa-info-circle text-primary me-2"></i>版本信息</h4>
+                    <p class="mb-2"><strong>版本：</strong>v1.0.0</p>
+                    <p class="mb-2"><strong>更新时间：</strong>2024年</p>
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            本项目基于GitHub公开API开发，数据来源于GitHub平台
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

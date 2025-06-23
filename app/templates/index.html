@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}GitHub新闻 - AI项目精选{% endblock %}
+
+{% block content %}
+<!-- 搜索和筛选 -->
+<div class="search-container">
+    <div class="row align-items-end">
+        <div class="col-12">
+            <h2 class="mb-3">
+                <i class="fas fa-rocket text-primary me-2"></i>AI项目精选
+                {% if latest_refresh %}
+                    <small class="text-muted ms-3">
+                        <i class="fas fa-clock me-1"></i>
+                        最后更新: {{ latest_refresh.end_time.strftime('%Y-%m-%d %H:%M') if latest_refresh.end_time else latest_refresh.start_time.strftime('%Y-%m-%d %H:%M') }}
+                    </small>
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+    
+    <form method="GET" action="{{ url_for('main.index') }}" class="row g-3">
+        <div class="col-md-4">
+            <label for="keyword" class="form-label">关键词搜索</label>
+            <input type="text" class="form-control" id="keyword" name="keyword" 
+                   value="{{ keyword }}" placeholder="搜索项目名称或描述...">
+        </div>
+        
+        <div class="col-md-3">
+            <label for="owner" class="form-label">作者</label>
+            <input type="text" class="form-control" id="owner" name="owner" 
+                   value="{{ owner }}" placeholder="搜索作者...">
+        </div>
+        
+        <div class="col-md-2">
+            <label for="language" class="form-label">编程语言</label>
+            <select class="form-select" id="language" name="language">
+                <option value="">全部语言</option>
+                {% for lang in languages %}
+                    <option value="{{ lang }}" {% if lang == language %}selected{% endif %}>
+                        {{ lang }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="sort" class="form-label">排序方式</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="stars_count" {% if sort_by == 'stars_count' %}selected{% endif %}>星标数</option>
+                <option value="updated_at" {% if sort_by == 'updated_at' %}selected{% endif %}>更新时间</option>
+                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>项目名称</option>
+            </select>
+        </div>
+        
+        <div class="col-md-1">
+            <label for="order" class="form-label">顺序</label>
+            <select class="form-select" id="order" name="order">
+                <option value="desc" {% if order == 'desc' %}selected{% endif %}>降序</option>
+                <option value="asc" {% if order == 'asc' %}selected{% endif %}>升序</option>
+            </select>
+        </div>
+        
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary me-2">
+                <i class="fas fa-search me-1"></i>搜索
+            </button>
+            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-undo me-1"></i>重置
+            </a>
+            <a href="{{ url_for('main.manual_refresh') }}" class="btn btn-refresh ms-2">
+                <i class="fas fa-sync-alt me-1"></i>手动刷新
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- 项目统计 -->
+{% if projects %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            共找到 <strong>{{ pagination.total }}</strong> 个项目，当前显示第 {{ pagination.page }} 页
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 项目列表 -->
+<div class="row">
+    {% if projects %}
+        {% for project in projects %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card project-card h-100">
+                <div class="card-body d-flex flex-column">
+                    <!-- 项目标题 -->
+                    <h5 class="card-title">
+                        <a href="{{ project.html_url }}" target="_blank" class="text-decoration-none">
+                            {{ project.name }}
+                        </a>
+                    </h5>
+                    
+                    <!-- 作者 -->
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-user me-1"></i>
+                        <a href="https://github.com/{{ project.owner }}" target="_blank" class="text-muted text-decoration-none">
+                            {{ project.owner }}
+                        </a>
+                    </p>
+                    
+                    <!-- 项目描述 -->
+                    <p class="card-text flex-grow-1">
+                        {{ project.description[:150] }}{% if project.description and project.description|length > 150 %}...{% endif %}
+                    </p>
+                    
+                    <!-- 编程语言 -->
+                    {% if project.language %}
+                    <div class="mb-2">
+                        <span class="badge bg-secondary language-badge">
+                            <i class="fas fa-code me-1"></i>{{ project.language }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 项目统计 -->
+                    <div class="row text-center small">
+                        <div class="col-4">
+                            <i class="fas fa-star stats-icon"></i>
+                            <strong>{{ "{:,}".format(project.stars_count) }}</strong>
+                            <div class="text-muted">Stars</div>
+                        </div>
+                        <div class="col-4">
+                            <i class="fas fa-code-branch stats-icon"></i>
+                            <strong>{{ "{:,}".format(project.forks_count) }}</strong>
+                            <div class="text-muted">Forks</div>
+                        </div>
+                        <div class="col-4">
+                            <i class="fas fa-eye stats-icon"></i>
+                            <strong>{{ "{:,}".format(project.watchers_count) }}</strong>
+                            <div class="text-muted">Watchers</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 更新时间 -->
+                    <div class="mt-3 pt-2 border-top">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            更新于: {% if project.updated_at %}{{ project.updated_at.strftime('%Y-%m-%d') }}{% else %}未知{% endif %}
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- 项目链接 -->
+                <div class="card-footer bg-transparent">
+                    <a href="{{ project.html_url }}" target="_blank" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fab fa-github me-1"></i>查看项目
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <!-- 空状态 -->
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">没有找到匹配的项目</h4>
+                <p class="text-muted">请尝试调整搜索条件或 
+                    <a href="{{ url_for('main.manual_refresh') }}" class="text-decoration-none">刷新数据</a>
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- 分页导航 -->
+{% if pagination.pages > 1 %}
+<nav aria-label="项目分页">
+    <ul class="pagination justify-content-center">
+        <!-- 上一页 -->
+        {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.index', page=pagination.prev_num, 
+                    keyword=keyword, owner=owner, language=language, sort=sort_by, order=order) }}">
+                    <i class="fas fa-chevron-left"></i> 上一页
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i> 上一页</span>
+            </li>
+        {% endif %}
+        
+        <!-- 页码 -->
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+                {% if page_num != pagination.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.index', page=page_num, 
+                            keyword=keyword, owner=owner, language=language, sort=sort_by, order=order) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        <!-- 下一页 -->
+        {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.index', page=pagination.next_num, 
+                    keyword=keyword, owner=owner, language=language, sort=sort_by, order=order) }}">
+                    下一页 <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">下一页 <i class="fas fa-chevron-right"></i></span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+<!-- 分页信息 -->
+<div class="text-center text-muted small">
+    显示第 {{ ((pagination.page - 1) * pagination.per_page + 1) }} - 
+    {{ (pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total) }} 项，
+    共 {{ pagination.total }} 项
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 搜索表单增强
+document.addEventListener('DOMContentLoaded', function() {
+    // 回车键提交搜索
+    const searchInputs = document.querySelectorAll('input[type="text"]');
+    searchInputs.forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

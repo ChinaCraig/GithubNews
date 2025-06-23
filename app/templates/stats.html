@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}统计信息 - GitHub新闻{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-chart-bar text-primary me-2"></i>统计信息</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- 总体统计 -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">总项目数</h5>
+                        <h2 class="mb-0">{{ "{:,}".format(total_projects) }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-folder fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">总星标数</h5>
+                        <h2 class="mb-0">{{ "{:,}".format(total_stars) }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-star fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">总分叉数</h5>
+                        <h2 class="mb-0">{{ "{:,}".format(total_forks) }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-code-branch fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编程语言统计 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-code me-2"></i>热门编程语言 (Top 10)</h5>
+            </div>
+            <div class="card-body">
+                {% if language_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>编程语言</th>
+                                <th>项目数量</th>
+                                <th>总星标数</th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for language, count, stars in language_stats %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ language }}</span>
+                                </td>
+                                <td>{{ "{:,}".format(count) }}</td>
+                                <td>{{ "{:,}".format(stars or 0) }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ (count / language_stats[0][1] * 100) if language_stats else 0 }}%">
+                                            {{ "%.1f"|format((count / total_projects * 100) if total_projects > 0 else 0) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 刷新日志 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>最近刷新记录</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_refreshes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>类型</th>
+                                <th>关键词</th>
+                                <th>状态</th>
+                                <th>新增项目</th>
+                                <th>更新项目</th>
+                                <th>总数量</th>
+                                <th>耗时</th>
+                                <th>时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for refresh in recent_refreshes %}
+                            <tr>
+                                <td>
+                                    {% if refresh.refresh_type == 'manual' %}
+                                        <span class="badge bg-primary">手动</span>
+                                    {% else %}
+                                        <span class="badge bg-info">定时</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ refresh.keyword }}</td>
+                                <td>
+                                    {% if refresh.status == 'success' %}
+                                        <span class="badge bg-success">成功</span>
+                                    {% elif refresh.status == 'failed' %}
+                                        <span class="badge bg-danger">失败</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">运行中</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ refresh.new_projects or 0 }}</td>
+                                <td>{{ refresh.updated_projects or 0 }}</td>
+                                <td>{{ refresh.total_fetched or 0 }}</td>
+                                <td>{{ refresh.duration_seconds or 0 }}秒</td>
+                                <td>
+                                    <small>{{ refresh.start_time.strftime('%m-%d %H:%M') }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无刷新记录</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API统计 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>API调用统计 (最近7天)</h5>
+            </div>
+            <div class="card-body">
+                {% if api_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>总请求数</th>
+                                <th>成功请求</th>
+                                <th>失败请求</th>
+                                <th>限制次数</th>
+                                <th>成功率</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in api_stats %}
+                            <tr>
+                                <td>{{ stat.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ stat.total_requests }}</td>
+                                <td>{{ stat.successful_requests }}</td>
+                                <td>{{ stat.failed_requests }}</td>
+                                <td>{{ stat.rate_limit_hits }}</td>
+                                <td>
+                                    {% if stat.total_requests > 0 %}
+                                        {% set success_rate = (stat.successful_requests / stat.total_requests * 100) %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if success_rate >= 90 %}bg-success{% elif success_rate >= 70 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" style="width: {{ success_rate }}%">
+                                                {{ "%.1f"|format(success_rate) }}%
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无API统计数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %} 
