@@ -17,8 +17,8 @@ def init_scheduler(app):
             except Exception as e:
                 current_app.logger.error(f"Scheduled refresh failed: {str(e)}")
     
-    # 启动时执行一次刷新（可选）
-    @scheduler.task('interval', id='startup_refresh', seconds=30)
+    # 启动时执行一次刷新（修复后 - 使用一次性任务而不是重复任务）
+    @scheduler.task('date', id='startup_refresh', run_date=datetime.now())
     def startup_refresh():
         """启动时刷新任务（只执行一次）"""
         with app.app_context():
@@ -35,14 +35,8 @@ def init_scheduler(app):
                     current_app.logger.info("Starting startup refresh...")
                     refresh_log = RefreshService.scheduled_refresh()
                     current_app.logger.info(f"Startup refresh completed: {refresh_log.status}")
-                
-                # 移除这个一次性任务
-                scheduler.remove_job('startup_refresh')
+                else:
+                    current_app.logger.info("Startup refresh already completed today")
                 
             except Exception as e:
-                current_app.logger.error(f"Startup refresh failed: {str(e)}")
-                # 移除任务即使失败了
-                try:
-                    scheduler.remove_job('startup_refresh')
-                except:
-                    pass 
+                current_app.logger.error(f"Startup refresh failed: {str(e)}") 

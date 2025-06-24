@@ -96,13 +96,22 @@ class GitHubService:
             stats = ApiStats(date=today)
             db.session.add(stats)
         
+        # 处理可能为None的统计字段
+        if stats.total_requests is None:
+            stats.total_requests = 0
         stats.total_requests += 1
         
         if failed or status_code >= 400:
+            if stats.failed_requests is None:
+                stats.failed_requests = 0
             stats.failed_requests += 1
             if status_code == 403:
+                if stats.rate_limit_hits is None:
+                    stats.rate_limit_hits = 0
                 stats.rate_limit_hits += 1
         else:
+            if stats.successful_requests is None:
+                stats.successful_requests = 0
             stats.successful_requests += 1
         
         try:
@@ -225,7 +234,11 @@ class ProjectService:
         project.archived = repo.get('archived', False)
         project.disabled = repo.get('disabled', False)
         project.last_fetched_at = datetime.utcnow()
-        project.fetch_count += 1
+        # 处理fetch_count可能为None的情况
+        if project.fetch_count is None:
+            project.fetch_count = 1
+        else:
+            project.fetch_count += 1
     
     @staticmethod
     def search_projects(keyword=None, owner=None, language=None, sort_by='stars_count', order='desc', page=1, per_page=20):
