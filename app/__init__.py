@@ -34,8 +34,18 @@ def create_app(config_class=Config):
         db.create_all()
     
     # 初始化定时任务
-    from app.scheduler import init_scheduler
+    from app.scheduler_init import init_scheduler
     init_scheduler(app)
+    
+    return app
+
+def create_minimal_app(config_class=Config):
+    """创建轻量级应用实例，仅用于数据库操作，不初始化scheduler"""
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+    
+    # 只初始化数据库相关扩展
+    db.init_app(app)
     
     return app
 

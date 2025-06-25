@@ -112,4 +112,57 @@ CREATE TABLE IF NOT EXISTS api_stats (
     
     UNIQUE KEY unique_date (date),
     INDEX idx_date (date DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='API请求统计表'; 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='API请求统计表';
+
+-- 创建定时器配置表
+CREATE TABLE IF NOT EXISTS `scheduler_config` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `config_name` VARCHAR(100) NOT NULL COMMENT '配置名称',
+    `schedule_type` ENUM('interval', 'cron') NOT NULL DEFAULT 'interval' COMMENT '调度类型：interval=固定间隔，cron=指定时间',
+
+    -- 固定间隔配置
+    `interval_hours` INT(11) NULL COMMENT '间隔小时数（仅interval类型使用）',
+
+    -- 指定时间配置
+    `cron_hour` INT(11) NULL COMMENT '小时（0-23，仅cron类型使用）',
+    `cron_minute` INT(11) DEFAULT 0 COMMENT '分钟（0-59，仅cron类型使用）',
+    `cron_day_of_week` VARCHAR(20) NULL COMMENT '星期几（0-6或*，仅cron类型使用）',
+
+    -- 通用配置
+    `keyword` VARCHAR(255) DEFAULT 'AI' COMMENT '搜索关键词',
+    `is_active` TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+    `max_results` INT(11) DEFAULT 1000 COMMENT '最大结果数',
+
+    -- 元数据
+    `description` VARCHAR(500) NULL COMMENT '配置描述',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `last_executed` TIMESTAMP NULL COMMENT '最后执行时间',
+
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `config_name` (`config_name`),
+    INDEX `idx_schedule_type` (`schedule_type`),
+    INDEX `idx_is_active` (`is_active`),
+    INDEX `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='定时器配置表';
+
+-- 插入默认配置
+INSERT INTO `scheduler_config` (
+    `config_name`,
+    `schedule_type`,
+    `interval_hours`,
+    `keyword`,
+    `description`,
+    `is_active`
+) VALUES (
+    '默认定时任务',
+    'interval',
+    6,
+    'AI',
+    '系统默认的定时刷新任务，每6小时执行一次',
+    1
+) ON DUPLICATE KEY UPDATE
+    `interval_hours` = VALUES(`interval_hours`),
+    `keyword` = VALUES(`keyword`),
+    `description` = VALUES(`description`),
+    `updated_at` = CURRENT_TIMESTAMP;

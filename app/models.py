@@ -1,6 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from app import db
 import json
+
+# 中国时区 (UTC+8)
+CHINA_TZ = timezone(timedelta(hours=8))
+
+def china_now():
+    """获取当前中国时间"""
+    return datetime.now(CHINA_TZ).replace(tzinfo=None)
 
 class GitHubProject(db.Model):
     """GitHub项目模型"""
@@ -34,9 +41,9 @@ class GitHubProject(db.Model):
     visibility = db.Column(db.String(20), default='public', comment='可见性')
     
     # 本地管理字段
-    local_created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, comment='本地创建时间')
-    local_updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow, comment='本地更新时间')
-    last_fetched_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, comment='最后抓取时间')
+    local_created_at = db.Column(db.TIMESTAMP, default=china_now, comment='本地创建时间')
+    local_updated_at = db.Column(db.TIMESTAMP, default=china_now, onupdate=china_now, comment='本地更新时间')
+    last_fetched_at = db.Column(db.TIMESTAMP, default=china_now, comment='最后抓取时间')
     fetch_count = db.Column(db.Integer, default=1, comment='抓取次数')
     
     # 唯一约束
@@ -89,7 +96,7 @@ class RefreshLog(db.Model):
     status = db.Column(db.Enum('running', 'success', 'failed'), default='running', comment='状态')
     error_message = db.Column(db.Text, comment='错误信息')
     api_requests_count = db.Column(db.Integer, default=0, comment='API请求次数')
-    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    created_at = db.Column(db.TIMESTAMP, default=china_now)
     
     def __repr__(self):
         return f'<RefreshLog {self.refresh_type} {self.keyword}>'
@@ -104,8 +111,8 @@ class SystemConfig(db.Model):
     description = db.Column(db.String(255), comment='配置描述')
     config_type = db.Column(db.Enum('string', 'int', 'float', 'boolean', 'json'), default='string', comment='配置类型')
     is_active = db.Column(db.Boolean, default=True, comment='是否启用')
-    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
-    updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.TIMESTAMP, default=china_now)
+    updated_at = db.Column(db.TIMESTAMP, default=china_now, onupdate=china_now)
     
     def __repr__(self):
         return f'<SystemConfig {self.config_key}>'
@@ -136,8 +143,72 @@ class ApiStats(db.Model):
     successful_requests = db.Column(db.Integer, default=0, comment='成功请求数')
     failed_requests = db.Column(db.Integer, default=0, comment='失败请求数')
     rate_limit_hits = db.Column(db.Integer, default=0, comment='触发限制次数')
-    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
-    updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.TIMESTAMP, default=china_now)
+    updated_at = db.Column(db.TIMESTAMP, default=china_now, onupdate=china_now)
     
     def __repr__(self):
-        return f'<ApiStats {self.date}>' 
+        return f'<ApiStats {self.date}>'
+
+class SchedulerConfig(db.Model):
+    """定时器配置模型"""
+    __tablename__ = 'scheduler_config'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    config_name = db.Column(db.String(100), unique=True, nullable=False, comment='配置名称')
+    schedule_type = db.Column(db.Enum('interval', 'cron'), nullable=False, default='interval', comment='调度类型：interval=固定间隔，cron=指定时间')
+    
+    # 固定间隔配置
+    interval_hours = db.Column(db.Integer, comment='间隔小时数（仅interval类型使用）')
+    
+    # 指定时间配置
+    cron_hour = db.Column(db.Integer, comment='小时（0-23，仅cron类型使用）')
+    cron_minute = db.Column(db.Integer, default=0, comment='分钟（0-59，仅cron类型使用）')
+    cron_day_of_week = db.Column(db.String(20), comment='星期几（0-6或*，仅cron类型使用）')
+    
+    # 通用配置
+    keyword = db.Column(db.String(255), default='AI', comment='搜索关键词')
+    is_active = db.Column(db.Boolean, default=True, comment='是否启用')
+    max_results = db.Column(db.Integer, default=1000, comment='最大结果数')
+    
+    # 元数据
+    description = db.Column(db.String(500), comment='配置描述')
+    created_at = db.Column(db.TIMESTAMP, default=china_now)
+    updated_at = db.Column(db.TIMESTAMP, default=china_now, onupdate=china_now)
+    last_executed = db.Column(db.TIMESTAMP, comment='最后执行时间')
+    
+    def __repr__(self):
+        return f'<SchedulerConfig {self.config_name}>'
+    
+    def get_schedule_expression(self):
+        """获取调度表达式"""
+        if self.schedule_type == 'interval':
+            return f"每{self.interval_hours}小时执行一次"
+        elif self.schedule_type == 'cron':
+            day_names = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+            if self.cron_day_of_week == '*':
+                day_desc = '每天'
+            else:
+                days = [day_names[int(d)] for d in self.cron_day_of_week.split(',')]
+                day_desc = '、'.join(days)
+            return f"{day_desc} {self.cron_hour:02d}:{self.cron_minute:02d}"
+        return "未知调度类型"
+    
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            'id': self.id,
+            'config_name': self.config_name,
+            'schedule_type': self.schedule_type,
+            'interval_hours': self.interval_hours,
+            'cron_hour': self.cron_hour,
+            'cron_minute': self.cron_minute,
+            'cron_day_of_week': self.cron_day_of_week,
+            'keyword': self.keyword,
+            'is_active': self.is_active,
+            'max_results': self.max_results,
+            'description': self.description,
+            'schedule_expression': self.get_schedule_expression(),
+            'last_executed': self.last_executed.isoformat() if self.last_executed else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        } 

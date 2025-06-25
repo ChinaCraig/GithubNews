@@ -1,8 +1,15 @@
 from flask import Blueprint, jsonify, request, current_app
 from app import db
-from app.services import ProjectService, RefreshService
-from app.models import GitHubProject, RefreshLog, ApiStats
-from datetime import datetime, timedelta
+from app.services import ProjectService, RefreshService, SchedulerService
+from app.models import GitHubProject, RefreshLog, ApiStats, SchedulerConfig
+from datetime import datetime, timedelta, timezone
+
+# 中国时区 (UTC+8)
+CHINA_TZ = timezone(timedelta(hours=8))
+
+def china_now():
+    """获取当前中国时间"""
+    return datetime.now(CHINA_TZ).replace(tzinfo=None)
 
 bp = Blueprint('api', __name__)
 
@@ -162,7 +169,7 @@ def api_stats():
         ).limit(10).all()
         
         # 最近刷新统计
-        today = datetime.now().date()
+        today = china_now().date()
         week_ago = today - timedelta(days=7)
         
         recent_refreshes = RefreshLog.query.filter(
@@ -228,6 +235,230 @@ def api_languages():
                 }
                 for lang in languages
             ]
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+# 定时器配置API
+@bp.route('/scheduler/configs')
+def api_scheduler_configs():
+    """获取所有定时器配置API"""
+    try:
+        configs = SchedulerService.get_all_configs()
+        
+        return jsonify({
+            'status': 'success',
+            'data': [config.to_dict() for config in configs]
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/configs', methods=['POST'])
+def api_create_scheduler_config():
+    """创建定时器配置API"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': '请求数据不能为空'
+            }), 400
+        
+        # 验证必需字段
+        required_fields = ['config_name', 'schedule_type']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'缺少必需字段: {field}'
+                }), 400
+        
+        # 验证调度类型特定字段
+        if data['schedule_type'] == 'interval' and 'interval_hours' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': '固定间隔类型需要指定interval_hours'
+            }), 400
+        elif data['schedule_type'] == 'cron' and 'cron_hour' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': '指定时间类型需要指定cron_hour'
+            }), 400
+        
+        config = SchedulerService.create_config(data)
+        
+        return jsonify({
+            'status': 'success',
+            'data': config.to_dict(),
+            'message': f'定时器配置"{config.config_name}"创建成功'
+        }), 201
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/configs/<int:config_id>')
+def api_get_scheduler_config(config_id):
+    """获取单个定时器配置API"""
+    try:
+        config = SchedulerConfig.query.get(config_id)
+        if not config:
+            return jsonify({
+                'status': 'error',
+                'message': '配置不存在'
+            }), 404
+        
+        return jsonify({
+            'status': 'success',
+            'data': config.to_dict()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/configs/<int:config_id>', methods=['PUT'])
+def api_update_scheduler_config(config_id):
+    """更新定时器配置API"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': '请求数据不能为空'
+            }), 400
+        
+        config = SchedulerService.update_config(config_id, data)
+        
+        return jsonify({
+            'status': 'success',
+            'data': config.to_dict(),
+            'message': f'定时器配置"{config.config_name}"更新成功'
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 404
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/configs/<int:config_id>', methods=['DELETE'])
+def api_delete_scheduler_config(config_id):
+    """删除定时器配置API"""
+    try:
+        config_name = SchedulerConfig.query.get(config_id).config_name
+        SchedulerService.delete_config(config_id)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'定时器配置"{config_name}"删除成功'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/configs/<int:config_id>/toggle', methods=['POST'])
+def api_toggle_scheduler_config(config_id):
+    """切换定时器配置状态API"""
+    try:
+        config = SchedulerService.toggle_config_status(config_id)
+        status_text = '启用' if config.is_active else '禁用'
+        
+        return jsonify({
+            'status': 'success',
+            'data': config.to_dict(),
+            'message': f'定时器配置"{config.config_name}"已{status_text}'
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 404
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/configs/<int:config_id>/execute', methods=['POST'])
+def api_execute_scheduler_config(config_id):
+    """立即执行定时器配置API"""
+    try:
+        refresh_log = SchedulerService.execute_config_now(config_id)
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'refresh_id': refresh_log.id,
+                'status': refresh_log.status,
+                'keyword': refresh_log.keyword,
+                'new_projects': refresh_log.new_projects,
+                'updated_projects': refresh_log.updated_projects,
+                'total_fetched': refresh_log.total_fetched,
+                'duration_seconds': refresh_log.duration_seconds,
+                'error_message': refresh_log.error_message
+            },
+            'message': '任务执行完成'
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 404
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/status')
+def api_scheduler_status():
+    """获取调度器状态API"""
+    try:
+        status = SchedulerService.get_scheduler_status()
+        
+        return jsonify({
+            'status': 'success',
+            'data': status
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/scheduler/reload', methods=['POST'])
+def api_reload_scheduler():
+    """重新加载调度器API"""
+    try:
+        SchedulerService.reload_scheduler()
+        
+        return jsonify({
+            'status': 'success',
+            'message': '调度器重新加载成功'
         })
         
     except Exception as e:
