@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}{{ '编辑' if action == 'edit' else '创建' }}定时器配置{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-{{ 'edit' if action == 'edit' else 'plus' }}"></i> 
+                        {{ '编辑' if action == 'edit' else '创建' }}定时器配置</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="schedulerForm">
+                        <!-- 基本信息 -->
+                        <div class="mb-3">
+                            <label for="config_name" class="form-label">配置名称 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="config_name" name="config_name" 
+                                   value="{{ config.config_name if config else '' }}" required>
+                            <div class="form-text">给这个定时器配置起一个有意义的名称</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">描述</label>
+                            <textarea class="form-control" id="description" name="description" rows="2">{{ config.description if config else '' }}</textarea>
+                            <div class="form-text">可选：描述这个定时器的用途</div>
+                        </div>
+
+                        <!-- 调度类型 -->
+                        <div class="mb-4">
+                            <label class="form-label">调度类型 <span class="text-danger">*</span></label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="schedule_type" 
+                                               id="interval_type" value="interval" 
+                                               {{ 'checked' if not config or config.schedule_type == 'interval' else '' }}>
+                                        <label class="form-check-label" for="interval_type">
+                                            <i class="fas fa-clock"></i> 固定间隔
+                                            <small class="d-block text-muted">按指定的小时间隔重复执行</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="schedule_type" 
+                                               id="cron_type" value="cron"
+                                               {{ 'checked' if config and config.schedule_type == 'cron' else '' }}>
+                                        <label class="form-check-label" for="cron_type">
+                                            <i class="fas fa-calendar-alt"></i> 指定时间
+                                            <small class="d-block text-muted">在特定时间执行</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 固定间隔配置 -->
+                        <div id="interval_config" class="mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6><i class="fas fa-clock"></i> 固定间隔配置</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="interval_hours" class="form-label">间隔小时数 <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="interval_hours" name="interval_hours" 
+                                                   min="1" max="168" value="{{ config.interval_hours if config and config.schedule_type == 'interval' else '6' }}">
+                                            <div class="form-text">1-168小时之间（最长一周）</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mt-3">
+                                                <small class="text-info">
+                                                    <i class="fas fa-info-circle"></i> 
+                                                    例如：设置为6表示每6小时执行一次
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 指定时间配置 -->
+                        <div id="cron_config" class="mb-4" style="display: none;">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6><i class="fas fa-calendar-alt"></i> 指定时间配置</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label for="cron_hour" class="form-label">小时 <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="cron_hour" name="cron_hour">
+                                                {% for hour in range(24) %}
+                                                <option value="{{ hour }}" 
+                                                        {{ 'selected' if config and config.schedule_type == 'cron' and config.cron_hour == hour else '' }}>
+                                                    {{ '%02d'|format(hour) }}:00
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="cron_minute" class="form-label">分钟</label>
+                                            <select class="form-select" id="cron_minute" name="cron_minute">
+                                                {% for minute in range(60) %}
+                                                <option value="{{ minute }}"
+                                                        {{ 'selected' if config and config.schedule_type == 'cron' and config.cron_minute == minute else '' }}>
+                                                    {{ '%02d'|format(minute) }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="cron_day_of_week" class="form-label">星期</label>
+                                            <select class="form-select" id="cron_day_of_week" name="cron_day_of_week">
+                                                <option value="*" {{ 'selected' if not config or not config.cron_day_of_week or config.cron_day_of_week == '*' else '' }}>每天</option>
+                                                <option value="1,2,3,4,5" {{ 'selected' if config and config.cron_day_of_week == '1,2,3,4,5' else '' }}>工作日</option>
+                                                <option value="0,6" {{ 'selected' if config and config.cron_day_of_week == '0,6' else '' }}>周末</option>
+                                                <option value="1" {{ 'selected' if config and config.cron_day_of_week == '1' else '' }}>周一</option>
+                                                <option value="2" {{ 'selected' if config and config.cron_day_of_week == '2' else '' }}>周二</option>
+                                                <option value="3" {{ 'selected' if config and config.cron_day_of_week == '3' else '' }}>周三</option>
+                                                <option value="4" {{ 'selected' if config and config.cron_day_of_week == '4' else '' }}>周四</option>
+                                                <option value="5" {{ 'selected' if config and config.cron_day_of_week == '5' else '' }}>周五</option>
+                                                <option value="6" {{ 'selected' if config and config.cron_day_of_week == '6' else '' }}>周六</option>
+                                                <option value="0" {{ 'selected' if config and config.cron_day_of_week == '0' else '' }}>周日</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-info">
+                                            <i class="fas fa-info-circle"></i> 
+                                            例如：每天09:00执行，或仅在工作日14:30执行
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 任务配置 -->
+                        <div class="mb-4">
+                            <h6><i class="fas fa-cog"></i> 任务配置</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="keyword" class="form-label">搜索关键词 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="keyword" name="keyword" 
+                                           value="{{ config.keyword if config else 'AI' }}" required>
+                                    <div class="form-text">在GitHub上搜索的关键词</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="max_results" class="form-label">最大结果数</label>
+                                    <input type="number" class="form-control" id="max_results" name="max_results" 
+                                           min="100" max="10000" value="{{ config.max_results if config else '1000' }}">
+                                    <div class="form-text">100-10000之间</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 状态配置 -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
+                                       {{ 'checked' if not config or config.is_active else '' }}>
+                                <label class="form-check-label" for="is_active">
+                                    <i class="fas fa-toggle-on"></i> 启用此配置
+                                </label>
+                                <div class="form-text">只有启用的配置才会被调度执行</div>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('main.scheduler_config') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> 返回列表
+                            </a>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> {{ '更新' if action == 'edit' else '创建' }}配置
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const intervalRadio = document.getElementById('interval_type');
+    const cronRadio = document.getElementById('cron_type');
+    const intervalConfig = document.getElementById('interval_config');
+    const cronConfig = document.getElementById('cron_config');
+
+    function toggleConfig() {
+        if (intervalRadio.checked) {
+            intervalConfig.style.display = 'block';
+            cronConfig.style.display = 'none';
+            document.getElementById('interval_hours').required = true;
+            document.getElementById('cron_hour').required = false;
+        } else {
+            intervalConfig.style.display = 'none';
+            cronConfig.style.display = 'block';
+            document.getElementById('interval_hours').required = false;
+            document.getElementById('cron_hour').required = true;
+        }
+    }
+
+    intervalRadio.addEventListener('change', toggleConfig);
+    cronRadio.addEventListener('change', toggleConfig);
+
+    // 初始化显示状态
+    toggleConfig();
+
+    // 表单验证
+    document.getElementById('schedulerForm').addEventListener('submit', function(e) {
+        const scheduleType = document.querySelector('input[name="schedule_type"]:checked').value;
+        
+        if (scheduleType === 'interval') {
+            const hours = parseInt(document.getElementById('interval_hours').value);
+            if (hours < 1 || hours > 168) {
+                e.preventDefault();
+                alert('间隔小时数必须在1-168之间！');
+                return;
+            }
+        }
+
+        const keyword = document.getElementById('keyword').value.trim();
+        if (!keyword) {
+            e.preventDefault();
+            alert('搜索关键词不能为空！');
+            return;
+        }
+
+        const maxResults = parseInt(document.getElementById('max_results').value);
+        if (maxResults < 100 || maxResults > 10000) {
+            e.preventDefault();
+            alert('最大结果数必须在100-10000之间！');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %} 
