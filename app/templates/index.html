@@ -62,15 +62,29 @@
         </div>
         
         <div class="col-12">
-            <button type="submit" class="btn btn-primary me-2">
-                <i class="fas fa-search me-1"></i>搜索
-            </button>
-            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-undo me-1"></i>重置
-            </a>
-            <a href="{{ url_for('main.manual_refresh') }}" class="btn btn-refresh ms-2">
-                <i class="fas fa-sync-alt me-1"></i>手动刷新
-            </a>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>搜索
+                    </button>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-undo me-1"></i>重置
+                    </a>
+                    <a href="{{ url_for('main.manual_refresh') }}" class="btn btn-refresh ms-2">
+                        <i class="fas fa-sync-alt me-1"></i>手动刷新
+                    </a>
+                </div>
+                
+                <!-- 展示样式切换按钮 -->
+                <div class="btn-group" role="group" aria-label="展示样式">
+                    <button type="button" class="btn btn-outline-secondary view-toggle" data-view="card" id="cardViewBtn">
+                        <i class="fas fa-th-large me-1"></i>卡片视图
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary view-toggle" data-view="list" id="listViewBtn">
+                        <i class="fas fa-list me-1"></i>列表视图
+                    </button>
+                </div>
+            </div>
         </div>
     </form>
 </div>
@@ -87,8 +101,8 @@
 </div>
 {% endif %}
 
-<!-- 项目列表 -->
-<div class="row">
+<!-- 项目列表 - 卡片视图 -->
+<div class="row" id="cardView">
     {% if projects %}
         {% for project in projects %}
         <div class="col-md-6 col-lg-4 mb-4">
@@ -204,6 +218,109 @@
                     <a href="{{ url_for('main.manual_refresh') }}" class="text-decoration-none">刷新数据</a>
                 </p>
             </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- 项目列表 - 列表视图 -->
+<div class="list-group" id="listView" style="display: none;">
+    {% if projects %}
+        {% for project in projects %}
+        <div class="list-group-item list-group-item-action project-list-item">
+            <div class="row align-items-center">
+                <!-- 项目信息 -->
+                <div class="col-md-6">
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <h5 class="mb-1">
+                            <a href="{{ project.html_url }}" target="_blank" class="text-decoration-none">
+                                {{ project.name }}
+                            </a>
+                        </h5>
+                        {% if project.language %}
+                        <span class="badge bg-secondary language-badge ms-2">
+                            <i class="fas fa-code me-1"></i>{{ project.language }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="mb-1 text-muted">
+                        <i class="fas fa-user me-1"></i>
+                        <a href="https://github.com/{{ project.owner }}" target="_blank" class="text-muted text-decoration-none">
+                            {{ project.owner }}
+                        </a>
+                    </p>
+                    <small class="text-muted">
+                        {{ project.description[:200] }}{% if project.description and project.description|length > 200 %}...{% endif %}
+                    </small>
+                </div>
+                
+                <!-- 统计信息 -->
+                <div class="col-md-4">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-star text-warning"></i>
+                                <strong class="small">{{ "{:,}".format(project.stars_count) }}</strong>
+                                <small class="text-muted">Stars</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-code-branch text-info"></i>
+                                <strong class="small">{{ "{:,}".format(project.forks_count) }}</strong>
+                                <small class="text-muted">Forks</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-eye text-secondary"></i>
+                                <strong class="small">{{ "{:,}".format(project.watchers_count) }}</strong>
+                                <small class="text-muted">Watchers</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 时间信息和操作 -->
+                <div class="col-md-2">
+                    <div class="text-end">
+                        {% if project.updated_at %}
+                        <small class="text-muted d-block">
+                            <i class="fas fa-sync-alt me-1 text-primary"></i>
+                            <span class="time-badge" 
+                                  data-timestamp="{{ project.updated_at.isoformat() if project.updated_at else '' }}"
+                                  title="GitHub更新: {{ project.updated_at.strftime('%Y-%m-%d %H:%M:%S') if project.updated_at else '未知' }}">
+                                {{ project.updated_at.strftime('%Y-%m-%d') if project.updated_at else '未知' }}
+                            </span>
+                        </small>
+                        {% endif %}
+                        
+                        {% if project.pushed_at %}
+                        <small class="text-muted d-block">
+                            <i class="fas fa-upload me-1 text-success"></i>
+                            <span class="time-badge"
+                                  data-timestamp="{{ project.pushed_at.isoformat() if project.pushed_at else '' }}"
+                                  title="最后推送: {{ project.pushed_at.strftime('%Y-%m-%d %H:%M:%S') if project.pushed_at else '未知' }}">
+                                {{ project.pushed_at.strftime('%Y-%m-%d') if project.pushed_at else '未知' }}
+                            </span>
+                        </small>
+                        {% endif %}
+                        
+                        <a href="{{ project.html_url }}" target="_blank" class="btn btn-outline-primary btn-sm mt-2">
+                            <i class="fab fa-github me-1"></i>查看
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <!-- 空状态 -->
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">没有找到匹配的项目</h4>
+            <p class="text-muted">请尝试调整搜索条件或 
+                <a href="{{ url_for('main.manual_refresh') }}" class="text-decoration-none">刷新数据</a>
+            </p>
         </div>
     {% endif %}
 </div>
@@ -350,6 +467,66 @@ document.addEventListener('DOMContentLoaded', function() {
             badge.parentNode.appendChild(relativeSpan);
         }
     });
+    
+    // 视图切换功能
+    initViewToggle();
+});
+
+// 初始化视图切换功能
+function initViewToggle() {
+    const cardView = document.getElementById('cardView');
+    const listView = document.getElementById('listView');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+    const listViewBtn = document.getElementById('listViewBtn');
+    
+    // 从本地存储获取用户偏好，默认为卡片视图
+    const savedView = localStorage.getItem('preferredView') || 'card';
+    
+    // 设置初始视图
+    switchView(savedView);
+    
+    // 绑定切换事件
+    cardViewBtn.addEventListener('click', function() {
+        switchView('card');
+        localStorage.setItem('preferredView', 'card');
+    });
+    
+    listViewBtn.addEventListener('click', function() {
+        switchView('list');
+        localStorage.setItem('preferredView', 'list');
+    });
+    
+    // 视图切换函数
+    function switchView(viewType) {
+        if (viewType === 'card') {
+            cardView.style.display = 'flex';
+            cardView.style.flexWrap = 'wrap';
+            listView.style.display = 'none';
+            
+            cardViewBtn.classList.add('active');
+            listViewBtn.classList.remove('active');
+        } else {
+            cardView.style.display = 'none';
+            listView.style.display = 'block';
+            
+            listViewBtn.classList.add('active');
+            cardViewBtn.classList.remove('active');
+        }
+        
+        // 触发自定义事件，便于扩展
+        const event = new CustomEvent('viewChanged', { 
+            detail: { viewType: viewType } 
+        });
+        document.dispatchEvent(event);
+    }
+}
+
+// 监听视图切换事件（可用于扩展功能）
+document.addEventListener('viewChanged', function(e) {
+    console.log('视图已切换到:', e.detail.viewType);
+    
+    // 可以在这里添加统计代码或其他扩展功能
+    // 例如：发送分析数据到后端
 });
 </script>
 {% endblock %} 

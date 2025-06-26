@@ -128,6 +128,77 @@
                 margin-bottom: 1rem;
             }
         }
+        
+        /* 列表视图样式 */
+        .project-list-item {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: white;
+        }
+        
+        .project-list-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #0d6efd;
+        }
+        
+        .project-list-item h5 a {
+            color: #212529;
+            font-weight: 600;
+        }
+        
+        .project-list-item h5 a:hover {
+            color: #0d6efd;
+        }
+        
+        /* 视图切换按钮样式 */
+        .view-toggle {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .view-toggle.active {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+        
+        .view-toggle:hover:not(.active) {
+            background-color: #e9ecef;
+            border-color: #ced4da;
+        }
+        
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .search-container {
+                padding: 1rem;
+            }
+            
+            .project-card {
+                margin-bottom: 1rem;
+            }
+            
+            /* 移动端隐藏视图切换按钮组 */
+            .btn-group[aria-label="展示样式"] {
+                display: none;
+            }
+            
+            /* 移动端列表视图调整 */
+            .project-list-item .row {
+                flex-direction: column;
+            }
+            
+            .project-list-item .col-md-6,
+            .project-list-item .col-md-4,
+            .project-list-item .col-md-2 {
+                margin-bottom: 1rem;
+            }
+            
+            .project-list-item .col-md-2 .text-end {
+                text-align: left !important;
+            }
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
