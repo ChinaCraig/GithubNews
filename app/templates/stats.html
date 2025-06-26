@@ -93,7 +93,7 @@
                                 <td>
                                     <div class="progress" style="height: 20px;">
                                         <div class="progress-bar" role="progressbar" 
-                                             style="width: {{ (count / language_stats[0][1] * 100) if language_stats else 0 }}%">
+                                             style="width: {{ (count / total_projects * 100) if total_projects > 0 else 0 }}%">
                                             {{ "%.1f"|format((count / total_projects * 100) if total_projects > 0 else 0) }}%
                                         </div>
                                     </div>
