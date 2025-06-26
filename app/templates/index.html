@@ -142,12 +142,46 @@
                         </div>
                     </div>
                     
-                    <!-- 更新时间 -->
+                    <!-- GitHub更新时间信息 -->
                     <div class="mt-3 pt-2 border-top">
-                        <small class="text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>
-                            更新于: {% if project.updated_at %}{{ project.updated_at.strftime('%Y-%m-%d') }}{% else %}未知{% endif %}
-                        </small>
+                        <div class="row">
+                            <div class="col-12">
+                                {% if project.updated_at %}
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">
+                                        <i class="fas fa-sync-alt me-1 text-primary"></i>
+                                        <strong>GitHub更新:</strong>
+                                    </small>
+                                    <span class="badge bg-light text-dark time-badge" 
+                                          data-timestamp="{{ project.updated_at.isoformat() if project.updated_at else '' }}"
+                                          title="完整时间: {{ project.updated_at.strftime('%Y-%m-%d %H:%M:%S') if project.updated_at else '未知' }}">
+                                        {{ project.updated_at.strftime('%Y-%m-%d') if project.updated_at else '未知' }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project.pushed_at %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-upload me-1 text-success"></i>
+                                        <strong>最后推送:</strong>
+                                    </small>
+                                    <span class="badge bg-light text-dark time-badge"
+                                          data-timestamp="{{ project.pushed_at.isoformat() if project.pushed_at else '' }}"
+                                          title="完整时间: {{ project.pushed_at.strftime('%Y-%m-%d %H:%M:%S') if project.pushed_at else '未知' }}">
+                                        {{ project.pushed_at.strftime('%Y-%m-%d') if project.pushed_at else '未知' }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if not project.updated_at and not project.pushed_at %}
+                                <small class="text-muted">
+                                    <i class="fas fa-question-circle me-1"></i>
+                                    时间信息暂不可用
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -242,6 +276,51 @@
 
 {% block extra_js %}
 <script>
+// 时间格式化函数
+function formatRelativeTime(timestamp) {
+    if (!timestamp) return '未知';
+    
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+    
+    if (diffInSeconds < 60) {
+        return '刚刚';
+    } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `${minutes}分钟前`;
+    } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `${hours}小时前`;
+    } else if (diffInSeconds < 2592000) { // 30天
+        const days = Math.floor(diffInSeconds / 86400);
+        return `${days}天前`;
+    } else if (diffInSeconds < 31536000) { // 365天
+        const months = Math.floor(diffInSeconds / 2592000);
+        return `${months}个月前`;
+    } else {
+        const years = Math.floor(diffInSeconds / 31536000);
+        return `${years}年前`;
+    }
+}
+
+// 根据时间久远程度添加不同的样式类
+function getTimeClass(timestamp) {
+    if (!timestamp) return '';
+    
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInDays = Math.floor((now - time) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays <= 7) {
+        return 'relative-time';
+    } else if (diffInDays <= 30) {
+        return 'outdated-time';
+    } else {
+        return 'very-outdated-time';
+    }
+}
+
 // 搜索表单增强
 document.addEventListener('DOMContentLoaded', function() {
     // 回车键提交搜索
@@ -252,6 +331,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.form.submit();
             }
         });
+    });
+    
+    // 更新时间显示
+    const timeBadges = document.querySelectorAll('.time-badge');
+    timeBadges.forEach(badge => {
+        const timestamp = badge.getAttribute('data-timestamp');
+        if (timestamp) {
+            const relativeTime = formatRelativeTime(timestamp);
+            const timeClass = getTimeClass(timestamp);
+            
+            // 创建相对时间显示
+            const relativeSpan = document.createElement('small');
+            relativeSpan.className = `d-block ${timeClass}`;
+            relativeSpan.textContent = relativeTime;
+            
+            // 添加到时间徽章后面
+            badge.parentNode.appendChild(relativeSpan);
+        }
     });
 });
 </script>
